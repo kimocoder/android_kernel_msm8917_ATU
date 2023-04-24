@@ -6,6 +6,7 @@ tdc_batch.py - a script to generate TC batch file
 Copyright (C) 2017 Chris Mi <chrism@mellanox.com>
 """
 
+
 import argparse
 
 parser = argparse.ArgumentParser(description='TC batch file generator')
@@ -27,34 +28,21 @@ args = parser.parse_args()
 device = args.device
 file = open(args.file, 'w')
 
-number = 1
-if args.number:
-    number = args.number
-
-skip = "skip_hw"
-if args.skip_sw:
-    skip = "skip_sw"
-
-share_action = ""
-if args.share_action:
-    share_action = "index 1"
-
+number = args.number if args.number else 1
+skip = "skip_sw" if args.skip_sw else "skip_hw"
+share_action = "index 1" if args.share_action else ""
 prio = "prio 1"
 if args.prio:
     prio = ""
-    if number > 0x4000:
-        number = 0x4000
-
+    number = min(number, 0x4000)
 index = 0
 for i in range(0x100):
     for j in range(0x100):
         for k in range(0x100):
             mac = ("%02x:%02x:%02x" % (i, j, k))
-            src_mac = "e4:11:00:" + mac
-            dst_mac = "e4:12:00:" + mac
-            cmd = ("filter add dev %s %s protocol ip parent ffff: flower %s "
-                   "src_mac %s dst_mac %s action drop %s" %
-                   (device, prio, skip, src_mac, dst_mac, share_action))
+            src_mac = f"e4:11:00:{mac}"
+            dst_mac = f"e4:12:00:{mac}"
+            cmd = f"filter add dev {device} {prio} protocol ip parent ffff: flower {skip} src_mac {src_mac} dst_mac {dst_mac} action drop {share_action}"
             file.write("%s\n" % cmd)
             index += 1
             if index >= number:
